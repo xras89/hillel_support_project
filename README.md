@@ -15,4 +15,12 @@ pipenv lock
 
 # Installing dependencies from .lock file
 pipenv sync
+
+# Django startproject
+django-admin startproject support
+
+# Django start server
+python support/manage.py runserver  
+
 ```
+
