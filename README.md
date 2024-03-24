@@ -22,5 +22,13 @@ django-admin startproject support
 # Django start server
 python support/manage.py runserver  
 
+# Sync DEV
+pipenv sync --dev
+
+# Sync
+pipenv sync
+
+# Clear caches
+pipenv --clear
 ```
 
