@@ -1,77 +1,55 @@
-# Create your views here.
 import json
-import random
-import string
 
-from django.http import HttpRequest, JsonResponse
+from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from issues.models import Issue
 
 
-def get_issues(request: HttpRequest) -> JsonResponse:
-    if request.method != "GET":
-        raise Exception("Only GET method is allowed")
-
-    # issues = Issue.objects.create()
-    # issues = Issue.objects.update()
-    # issues = Issue.objects.get()
-    # issues = Issue.objects.delete()
-    issues: list[Issue] = Issue.objects.all()
-
-    results: list[dict] = [
-        {
-            "id": issue.id,
-            "title": issue.title,
-            "body": issue.body,
-            "senior_id": issue.senior_id,
-            "junior_id": issue.junior_id,
-        }
-        for issue in issues
-    ]
-
-    return JsonResponse(data={"results": results})
+class IssueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Issue
+        # fields = ["id", "title", "body", "junior_id"]
+        # exclude = ["id"]
+        fields = "__all__"
 
 
-def _random_string(length: int = 10) -> str:
-    return "".join([random.choice(string.ascii_letters) for i in range(length)])
+@api_view()
+def get_issues(request) -> Response:
+    issues = Issue.objects.all()
+    results = [IssueSerializer(issue).data for issue in issues]
+
+    return Response(data={"results": results})
 
 
-def create_random_issue(request: HttpRequest) -> JsonResponse:
-    issue = Issue.objects.create(
-        title=_random_string(20),
-        body=_random_string(30),
-        senior_id=1,
-        junior_id=2,
-    )
+@api_view()
+def retrieve_issue(request, issue_id: int) -> Response:
+    instance = get_object_or_404(Issue, id=issue_id)
+    # try:
+    #     instance = Issue.objects.get(id=issue_id)
+    # except Issue.DoesNotExist:
+    #     raise Http404
 
-    result = {
-        "id": issue.id,
-        "title": issue.title,
-        "body": issue.body,
-        "senior_id": issue.senior_id,
-        "junior_id": issue.junior_id,
-    }
-
-    return JsonResponse(data=result)
+    return Response(data={"result": IssueSerializer(instance).data})
 
 
-def create_my_post_issue(request: HttpRequest) -> JsonResponse:
+@api_view(["POST"])
+def create_issue(request) -> Response:
+    try:
+        payload: dict = json.loads(request.body)
+    except json.decoder.JSONDecodeError:
+        raise Exception("Request Body is invalid ")
 
-    post_data = json.loads(request.body)
+    serializer = IssueSerializer(data=payload)
+    serializer.is_valid(raise_exception=True)
 
-    issue = Issue.objects.create(
-        title=post_data.get("title"),
-        body=post_data.get("body"),
-        senior_id=post_data.get("senior_id"),
-        junior_id=post_data.get("junior_id"),
-    )
+    issue = Issue.objects.create(**serializer.validated_data)
 
-    result = {
-        "id": issue.id,
-        "title": issue.title,
-        "body": issue.body,
-        "senior_id": issue.senior_id,
-        "junior_id": issue.junior_id,
-    }
+    return Response(data=IssueSerializer(issue).data)
 
-    return JsonResponse(data=result)
+    # issues = Issue.objects.all()
+    # results = [IssueSerializer(issue).data for issue in issues]
+
+    # return Response(data={"results": results})
